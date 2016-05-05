@@ -1,0 +1,18 @@
+group: // heres a comment
+  // here's a comment too
+  meta/
+    data: Cool Metadata // well?
+    other/data: Super Cool Metadata
+  subgroup:
+    color in subgroup: #291230 // comment after color
+  yellow: #c01016
+  color as group:
+    #aca
+    RAL(1000)
+    author/name: Erykah Badu
+// comments
+
+  ref color: =group.subgroup.color in subgroup
+
+color: #ff0
+  oct/weight: 2
