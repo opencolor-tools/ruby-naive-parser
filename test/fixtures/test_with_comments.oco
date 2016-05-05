@@ -16,3 +16,6 @@ group: // heres a comment
 
 color: #ff0
   oct/weight: 2
+  sureshot:
+    =group.subgroup.color in subgroup
+    #ff0
