@@ -1,4 +1,17 @@
+class ParserError < StandardError
+  def initialize(error, line, filename=nil)
+    super(error)
+    @message = error
+    @line = line
+    if line
+      set_stacktrace("#{file || 'String'}:#{line + 1}")
+    end
+  end
 
+  def to_str
+    "#{@message}" + line ? "on line #{line + 1}" : ""
+  end
+end
 class Metaproxy
   def initialize(data, hash)
     @data = data
@@ -134,12 +147,12 @@ class ColorValue < Entry
       elsif hex[1].length == 4 || hex[1].length == 8
         'rgba'
       else
-        raise("Malformed Hexcolor value in line #{line+1}")
+        raise(ParserError.new("Malformed Hexcolor value", line))
       end
     elsif other
       other[1]
     else
-      raise("Not a valid color value in line #{line+1}")
+      raise(ParserError.new("Invalid color value", line))
     end
     super(name, line)
     @value = value
@@ -154,7 +167,7 @@ class Reference < Entry
     if pathmatch
       @path = pathmatch[1]
     else
-      raise("Not a valid reference value on line #{line + 1}")
+      raise(ParserError.new("Invalid reference value", line))
     end
   end
   def resolved(stack = [])
@@ -256,7 +269,7 @@ class Parser
         if line[:tokens].first.match(/\/$/)
           current_group[:children].push(type: 'metagroup', name: line[:tokens].first, parent: current_group, children: [], line: i)
         elsif line[:tokens].first.match(/\//)
-          raise("A meta group must either have a trailing slash or must be closed with a colon. Line #{i+1}")
+          raise(ParserError.new("A meta group must either have a trailing slash or must be closed with a colon", i))
         elsif line[:tokens].first.match(/^=/)
           current_group[:children].push(type: 'reference', value: line[:tokens].first, parent: current_group, children: [], line: i)
         else
@@ -269,7 +282,7 @@ class Parser
           current_group[:children].push(type: 'value', name: line[:tokens].first, value: line[:tokens].last, parent: current_group, children: [], line: i)
         end
       else # other token lengths are syntax errors
-        raise("Too many colons error on line #{i+1}")
+        raise(ParseError.new("Too many colons", i))
       end
     end
     return output
@@ -281,9 +294,9 @@ class Parser
         childtypes = child[:children].map{|c| c[:type] }.uniq
         if childtypes.include?('colorvalue')
           if childtypes.include?('palette')
-            raise("Color #{child[:name]} on line #{child[:line] + 1} contains both color values and palette, which is not allowed")
+            raise(ParserError.new("Color cannot contain both color values and a subpalette", child[:line]))
           elsif childtypes.include?('value')
-            raise("Color #{child[:name]} on line #{child[:line] + 1} contains both color values and other named colors, which is not allowed")
+            raise(ParserError.new("Color cannot contain both color values and named colors", child[:line]))
           end
           child[:type] = 'color'
         end
@@ -310,7 +323,7 @@ class Parser
 
   def check_for_children(type, obj)
     if obj[:children].length > 0
-      raise("#{type} #{obj[:name]} on line #{obj[:line] + 1} can't have children")
+      raise(ParserError.new("#{type} #{obj[:name]} can't have children", obj[:line]))
     end
   end
 
